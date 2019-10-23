@@ -1,0 +1,86 @@
+FROM centos:7
+
+LABEL maintainer="NGINX Docker"
+
+ENV NGINX_VERSION="1.16.1"
+ENV OPENSSL_VERSION="1.1.1d"
+ENV PCRE_VERSION="8.43"
+ENV MODULE_NGX_VTS_VERSION="0.1.18"
+ENV NGINX_J="8"
+ENV NGINX_CONFIG_OPTIONS="\
+    --prefix=/usr/local/nginx \
+    --with-threads \
+    --with-file-aio \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --with-http_realip_module \
+    --with-http_addition_module \
+    --with-http_xslt_module=dynamic \
+    --with-http_image_filter_module=dynamic \
+    --with-http_geoip_module=dynamic \
+    --with-http_sub_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_mp4_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_auth_request_module \
+    --with-http_random_index_module \
+    --with-http_secure_link_module \
+    --with-http_degradation_module \
+    --with-http_slice_module \
+    --with-http_stub_status_module \
+    --with-mail=dynamic \
+    --with-mail_ssl_module \
+    --with-stream \
+    --with-stream_ssl_module \
+    --with-stream_realip_module \
+    --with-stream_geoip_module \
+    --with-stream_ssl_preread_module \
+    --with-compat \
+    --with-pcre-jit \
+    --with-compat \
+    --with-debug \
+    --add-module=/tmp/nginx-module-vts-${MODULE_NGX_VTS_VERSION} \
+    "
+ENV _NGINX_CONFIG_DEPS_PCRE="--with-pcre=/tmp/pcre-${PCRE_VERSION}"
+ENV _NGINX_CONFIG_DEPS_OPENSSL="--with-openssl=/tmp/openssl-${OPENSSL_VERSION}"
+
+RUN set -x \
+    && useradd -M -d /dev/null -s /sbin/nologin nginx \
+    && yum -y install epel-release.noarch \
+    && yum -y install gcc gcc-c++ gd-devel gettext GeoIP-devel libxslt-devel zlib-devel readline-devel perl perl-ExtUtils-Embed make wget\
+    && cd /tmp \
+    # && wget --no-check-certificate http://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz -O openssl-${OPENSSL_VERSION}.tar.gz \
+    && wget --no-check-certificate http://distfiles.macports.org/openssl/openssl-${OPENSSL_VERSION}.tar.gz -O openssl-${OPENSSL_VERSION}.tar.gz \
+    && tar xzf openssl-${OPENSSL_VERSION}.tar.gz \
+    && wget --no-check-certificate https://ftp.pcre.org/pub/pcre/pcre-${PCRE_VERSION}.tar.gz -O pcre-${PCRE_VERSION}.tar.gz \
+    && tar xzf pcre-${PCRE_VERSION}.tar.gz \
+    && wget --no-check-certificate https://github.com/vozlt/nginx-module-vts/archive/v${MODULE_NGX_VTS_VERSION}.tar.gz -O nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz \
+    && tar xf nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz -C /tmp \
+    && wget --no-check-certificate http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz -O nginx-${NGINX_VERSION}.tar.gz \
+    && tar xf nginx-${NGINX_VERSION}.tar.gz \
+    && cd /tmp/nginx-${NGINX_VERSION} \
+    && ./configure ${NGINX_CONFIG_OPTIONS} ${_NGINX_CONFIG_DEPS_PCRE} ${_NGINX_CONFIG_DEPS_OPENSSL} \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+    && cd /tmp \
+    && rm -rf \
+       openssl-${OPENSSL_VERSION} \
+       openssl-${OPENSSL_VERSION}.tar.gz \
+       nginx-${NGINX_VERSION} \
+       nginx-${NGINX_VERSION}.tar.gz \
+       pcre-${PCRE_VERSION} \ 
+       pcre-${PCRE_VERSION}.tar.gz \
+       nginx-module-vts-${MODULE_NGX_VTS_VERSION} \
+       nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz \
+    && yum -y remove make epel-release.noarch \
+    && yum clean all \
+    && ln -sf /dev/stdout /usr/local/nginx/logs/access.log \
+    && ln -sf /dev/stderr /usr/local/nginx/logs/error.log
+
+EXPOSE 80
+
+STOPSIGNAL SIGQUIT
+
+CMD ["/usr/local/nginx/sbin/nginx", "-c", "/usr/local/nginx/conf/nginx.conf", "-g", "daemon off;"]

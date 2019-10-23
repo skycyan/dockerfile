@@ -1,0 +1,242 @@
+FROM centos:7
+
+LABEL maintainer="NGINX-PHP-TWEMPROXY@YOU"
+
+#### PUBLIC
+RUN set -x \
+    && curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo \
+    && yum -y install epel-release.noarch \
+    && yum -y install gcc gcc-c++ gd-devel gettext GeoIP-devel libxslt-devel zlib-devel readline-devel perl perl-ExtUtils-Embed libtool re2c bison libxml2-devel bzip2-devel libcurl-devel libpng-devel libicu-devel libmcrypt-devel libwebp-devel libjpeg-devel openssl-devel gmp-devel libmemcached libmemcached-devel autoconf make wget file
+
+#### NGINX
+ENV NGINX_VERSION=1.16.1
+ENV OPENSSL_VERSION=1.1.1d
+ENV PCRE_VERSION=8.43
+ENV MODULE_NGX_VTS_VERSION=0.1.18
+ENV NGINX_J=8
+ENV NGINX_CONFIG_OPTIONS="\
+    --prefix=/usr/local/nginx \
+    --with-threads \
+    --with-file-aio \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --with-http_realip_module \
+    --with-http_addition_module \
+    --with-http_xslt_module=dynamic \
+    --with-http_image_filter_module=dynamic \
+    --with-http_geoip_module=dynamic \
+    --with-http_sub_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_mp4_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_auth_request_module \
+    --with-http_random_index_module \
+    --with-http_secure_link_module  \
+    --with-http_degradation_module  \
+    --with-http_slice_module \
+    --with-http_stub_status_module \
+    --with-mail=dynamic \
+    --with-mail_ssl_module \
+    --with-stream \
+    --with-stream_ssl_module \
+    --with-stream_realip_module \
+    --with-stream_geoip_module \
+    --with-stream_ssl_preread_module \
+    --with-compat \
+    --with-pcre-jit \
+    --with-compat \    
+    --with-debug \
+    --add-module=/tmp/nginx-module-vts-${MODULE_NGX_VTS_VERSION} \
+    "
+ENV _NGINX_CONFIG_DEPS_PCRE="--with-pcre=/tmp/pcre-${PCRE_VERSION}"
+ENV _NGINX_CONFIG_DEPS_OPENSSL="--with-openssl=/tmp/openssl-${OPENSSL_VERSION}"
+
+RUN set -x \
+    && useradd -M -d /dev/null -s /sbin/nologin nginx \
+    && cd /tmp \
+    && wget --no-check-certificate http://distfiles.macports.org/openssl/openssl-${OPENSSL_VERSION}.tar.gz -O openssl-${OPENSSL_VERSION}.tar.gz \
+    # && wget --no-check-certificate http://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz -O openssl-${OPENSSL_VERSION}.tar.gz \
+    && tar xzf openssl-${OPENSSL_VERSION}.tar.gz \
+    && wget --no-check-certificate https://ftp.pcre.org/pub/pcre/pcre-${PCRE_VERSION}.tar.gz -O pcre-${PCRE_VERSION}.tar.gz \
+    && tar xzf pcre-${PCRE_VERSION}.tar.gz \
+    && wget --no-check-certificate https://github.com/vozlt/nginx-module-vts/archive/v${MODULE_NGX_VTS_VERSION}.tar.gz -O nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz \
+    && tar xf nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz -C /tmp \
+    && wget --no-check-certificate http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz -O nginx-${NGINX_VERSION}.tar.gz \
+    && tar xf nginx-${NGINX_VERSION}.tar.gz \
+    && cd /tmp/nginx-${NGINX_VERSION} \
+    && ./configure ${NGINX_CONFIG_OPTIONS} ${_NGINX_CONFIG_DEPS_PCRE} ${_NGINX_CONFIG_DEPS_OPENSSL} \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+    && cd /tmp \
+    && rm -rf \
+       openssl-${OPENSSL_VERSION} \
+       openssl-${OPENSSL_VERSION}.tar.gz \
+       nginx-${NGINX_VERSION} \
+       nginx-${NGINX_VERSION}.tar.gz \
+       pcre-${PCRE_VERSION} \
+       pcre-${PCRE_VERSION}.tar.gz \
+       nginx-module-vts-${MODULE_NGX_VTS_VERSION} \
+       nginx-module-vts-${MODULE_NGX_VTS_VERSION}.tar.gz \
+    && ln -sf /dev/stdout /usr/local/nginx/logs/access.log \
+    && ln -sf /dev/stderr /usr/local/nginx/logs/error.log
+
+#### PHP
+ENV PHP_VERSION=7.3.10
+ENV PHP_URL=https://www.php.net/distributions/php-7.3.10.tar.gz
+ENV PHP_PFX=/usr/local/php
+ENV LIBZIP_VERSION=1.2.0
+ENV LIBZIP_URL=https://libzip.org/download/libzip-1.2.0.tar.gz
+ENV ACPU_VERSION=5.1.12
+ENV ACPU_URL=http://pecl.php.net/get/apcu-5.1.12.tgz
+ENV REDIS_PHP_VERSION=4.1.1
+ENV REDIS_PHP_URL=http://pecl.php.net/get/redis-4.1.1.tgz
+ENV MEMCACHED_PHP_VERSION=3.1.3
+ENV MEMCACHED_PHP_URL=http://pecl.php.net/get/memcached-3.1.3.tgz
+ENV PHP_CONFIG_OPTIONS="\
+    --prefix=/usr/local/php \
+    --with-config-file-path=/usr/local/php/etc \
+    --enable-fpm \
+    --enable-bcmath \
+    --enable-fileinfo \
+    --enable-filter \
+    --enable-json \
+    --enable-mbstring \
+    --enable-mbregex \
+    --enable-mbregex-backtrack \
+    --enable-exif \
+    --enable-sockets \
+    --enable-simplexml \
+    --enable-dom \
+    --enable-session \
+    --enable-ftp \
+    --enable-gd-jis-conv \
+    --enable-calendar \
+    --enable-shmop \
+    --enable-sysvmsg \
+    --enable-sysvsem \
+    --enable-sysvshm \
+    --enable-wddx \
+    --enable-zip \
+    --enable-mysqlnd \
+    --enable-mysqlnd-compression-support \
+    --enable-intl \
+    --enable-shared \
+    --enable-static \
+    --with-pcre-dir \
+    --with-curl \
+    --with-mysqli \
+    --with-mysql-sock \
+    --with-pdo-mysql \
+    --with-libxml-dir \
+    --with-zlib \
+    --with-zlib-dir \
+    --with-openssl \
+    --with-openssl-dir \
+    --with-mhash \
+    --with-bz2 \
+    --with-xsl \
+    --with-onig \
+    --with-readline \
+    --with-gettext \
+    --with-gmp \
+    --with-iconv \
+    --with-pcre-regex \
+    --with-gd \
+    --with-jpeg-dir \
+    --with-png-dir \
+    --with-cdb \
+    --with-pear \
+    "
+RUN set -x \
+# libzip (libzip >= 0.11)
+    && wget --no-check-certificate ${LIBZIP_URL} -O /tmp/libzip-${LIBZIP_VERSION}.tar.gz \
+    && tar xf /tmp/libzip-${LIBZIP_VERSION}.tar.gz -C /tmp \
+    && cd /tmp/libzip-${LIBZIP_VERSION} \
+    && ./configure \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+    && cp -rfp /usr/local/lib/libzip/include/zipconf.h /usr/local/include/zipconf.h \
+# PHP
+    && wget --no-check-certificate ${PHP_URL} -O /tmp/php-${PHP_VERSION}.tar.gz \
+    && tar xf /tmp/php-${PHP_VERSION}.tar.gz -C /tmp \
+    && cd /tmp/php-${PHP_VERSION} \
+    && ./configure ${PHP_CONFIG_OPTIONS} \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+# apcu-php
+    && wget --no-check-certificate ${ACPU_URL} -O /tmp/apcu-${ACPU_VERSION}.tgz \
+    && tar xf /tmp/apcu-${ACPU_VERSION}.tgz -C /tmp \
+    && cd /tmp/apcu-${ACPU_VERSION} \
+    && $PHP_PFX/bin/phpize \
+    && ./configure --with-php-config=$PHP_PFX/bin/php-config \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+# redis-php
+    && wget --no-check-certificate ${REDIS_PHP_URL} -O /tmp/redis-${REDIS_PHP_VERSION}.tgz \
+    && tar xf /tmp/redis-${REDIS_PHP_VERSION}.tgz -C /tmp \
+    && cd /tmp/redis-${REDIS_PHP_VERSION} \
+    && $PHP_PFX/bin/phpize \
+    && ./configure --with-php-config=$PHP_PFX/bin/php-config \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+# memcached-php
+    && wget --no-check-certificate ${MEMCACHED_PHP_URL} -O /tmp/memcached-${MEMCACHED_PHP_VERSION}.tgz \
+    && tar xf /tmp/memcached-${MEMCACHED_PHP_VERSION}.tgz -C /tmp \
+    && cd /tmp/memcached-${MEMCACHED_PHP_VERSION} \
+    && $PHP_PFX/bin/phpize \
+    && ./configure --with-php-config=$PHP_PFX/bin/php-config \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+# delete
+    && cd /tmp \
+    && rm -rf \
+       libzip-${LIBZIP_VERSION}.tar.gz \
+       libzip-${LIBZIP_VERSION} \
+       php-${PHP_VERSION}.tar.gz \
+       php-${PHP_VERSION} \
+       apcu-${ACPU_VERSION}.tgz \
+       apcu-${ACPU_VERSION} \
+       redis-${REDIS_PHP_VERSION}.tgz \
+       redis-${REDIS_PHP_VERSION} \
+       memcached-${MEMCACHED_PHP_VERSION}.tgz \
+       memcached-${MEMCACHED_PHP_VERSION}
+   
+#### twemproxy
+ENV TWEMPROXY_VERSION=1.0.4
+ENV TWEMPROXY_URL=https://github.com/meitu/twemproxy/archive/v1.0.4.tar.gz 
+
+RUN set -x \
+    && wget --no-check-certificate ${TWEMPROXY_URL} -O /tmp/twemproxy-${TWEMPROXY_VERSION}.tar.gz \
+    && tar xf /tmp/twemproxy-${TWEMPROXY_VERSION}.tar.gz -C /tmp \
+    && cd /tmp/twemproxy-${TWEMPROXY_VERSION} \
+    && autoreconf -fvi \
+    && ./configure --enable-debug=full \
+    && make -j${NGINX_J} \
+    && make -j${NGINX_J} install \
+    && mkdir -p /usr/local/twemproxy \
+    && cd /tmp \
+    && rm -rf \
+       /tmp/twemproxy-${TWEMPROXY_VERSION}.tar.gz \
+       /tmp/twemproxy-${TWEMPROXY_VERSION}
+
+ADD ./nginx-conf /usr/local/nginx/conf
+ADD ./php-conf /usr/local/php/etc
+ADD ./twemproxy-conf /usr/local/twemproxy
+
+RUN set -x \
+    && echo '#!/bin/bash' >> /run.sh \
+    && echo '/usr/local/sbin/nutcracker -c /usr/local/twemproxy/twemproxy.yml -d' >> /run.sh \
+    && echo '/usr/local/php/sbin/php-fpm --fpm-config /usr/local/php/etc/php-fpm.conf --pid /usr/local/php/var/run/php-fpm.pid' >> /run.sh \
+    && echo '/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf -g "daemon off;"' >> /run.sh \
+    && chmod +x /run.sh \
+    && chown -R nginx.nginx /usr/local/{php,nginx} \
+    && yum -y remove epel-release.noarch make wget file \
+    && yum clean all
+
+EXPOSE 80
+
+STOPSIGNAL SIGQUIT
+
+CMD ["/run.sh"]

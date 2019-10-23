@@ -1,0 +1,21 @@
+global:
+  worker_processes: 4
+  max_openfiles: 102400
+  user: nginx
+  group: nginx
+  worker_shutdown_timeout: 30
+pools:
+  alpha:
+    listen: 0.0.0.0:11212
+    hash: fnv1a_64
+    distribution: ketama
+    auto_eject_hosts: true
+    preconnect: true
+    timeout: 500
+    server_retry_timeout: 2000
+    server_failure_limit: 3
+    servers:
+      - 192.168.0.1:11210:1
+      - 192.168.0.2:11210:1
+      - 192.168.0.3:11210:1
+      - 192.168.0.4:11210:1
