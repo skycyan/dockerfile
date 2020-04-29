@@ -157,7 +157,6 @@ RUN set -x \
     && ./configure \
     && make -j${NGINX_J} \
     && make -j${NGINX_J} install \
-    && cp -rfp /usr/local/lib/libzip/include/zipconf.h /usr/local/include/zipconf.h \
 # PHP
     && wget --no-check-certificate ${PHP_URL} -O /tmp/php-${PHP_VERSION}.tar.gz \
     && tar xf /tmp/php-${PHP_VERSION}.tar.gz -C /tmp \
