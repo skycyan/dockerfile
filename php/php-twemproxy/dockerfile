@@ -46,7 +46,7 @@ ENV NGINX_CONFIG_OPTIONS="\
     --with-stream_ssl_preread_module \
     --with-compat \
     --with-pcre-jit \
-    --with-compat \    
+    --with-compat \
     --with-debug \
     --add-module=/tmp/nginx-module-vts-${MODULE_NGX_VTS_VERSION} \
     "
