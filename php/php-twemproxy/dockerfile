@@ -6,12 +6,12 @@ LABEL maintainer="NGINX-PHP-TWEMPROXY@YOU"
 RUN set -x \
     && curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo \
     && yum -y install epel-release.noarch \
-    && yum -y install gcc gcc-c++ gd-devel gettext GeoIP-devel libxslt-devel zlib-devel readline-devel perl perl-ExtUtils-Embed libtool re2c bison libxml2-devel bzip2-devel libcurl-devel libpng-devel libicu-devel libmcrypt-devel libwebp-devel libjpeg-devel openssl-devel gmp-devel libmemcached libmemcached-devel autoconf make wget file
+    && yum -y install gcc gcc-c++ gd-devel gettext GeoIP-devel libxslt-devel zlib-devel readline-devel sqlite-devel oniguruma-devel perl perl-ExtUtils-Embed libtool re2c bison libxml2-devel bzip2-devel libcurl-devel libpng-devel libicu-devel libmcrypt-devel libwebp-devel libjpeg-devel openssl-devel gmp-devel libmemcached libmemcached-devel autoconf make wget file
 
 #### NGINX
-ENV NGINX_VERSION=1.16.1
-ENV OPENSSL_VERSION=1.1.1d
-ENV PCRE_VERSION=8.43
+ENV NGINX_VERSION=1.18.0
+ENV OPENSSL_VERSION=1.1.1g
+ENV PCRE_VERSION=8.44
 ENV MODULE_NGX_VTS_VERSION=0.1.18
 ENV NGINX_J=8
 ENV NGINX_CONFIG_OPTIONS="\
@@ -83,17 +83,17 @@ RUN set -x \
     && ln -sf /dev/stderr /usr/local/nginx/logs/error.log
 
 #### PHP
-ENV PHP_VERSION=7.3.10
-ENV PHP_URL=https://www.php.net/distributions/php-7.3.10.tar.gz
+ENV PHP_VERSION=7.4.5
+ENV PHP_URL=https://www.php.net/distributions/php-${PHP_VERSION}.tar.gz
 ENV PHP_PFX=/usr/local/php
-ENV LIBZIP_VERSION=1.2.0
-ENV LIBZIP_URL=https://libzip.org/download/libzip-1.2.0.tar.gz
-ENV ACPU_VERSION=5.1.12
-ENV ACPU_URL=http://pecl.php.net/get/apcu-5.1.12.tgz
-ENV REDIS_PHP_VERSION=4.1.1
-ENV REDIS_PHP_URL=http://pecl.php.net/get/redis-4.1.1.tgz
-ENV MEMCACHED_PHP_VERSION=3.1.3
-ENV MEMCACHED_PHP_URL=http://pecl.php.net/get/memcached-3.1.3.tgz
+ENV LIBZIP_VERSION=1.3.2
+ENV LIBZIP_URL=https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz
+ENV ACPU_VERSION=5.1.18
+ENV ACPU_URL=http://pecl.php.net/get/apcu-${ACPU_VERSION}.tgz
+ENV REDIS_PHP_VERSION=5.2.1
+ENV REDIS_PHP_URL=http://pecl.php.net/get/redis-${REDIS_PHP_VERSION}.tgz
+ENV MEMCACHED_PHP_VERSION=3.1.5
+ENV MEMCACHED_PHP_URL=http://pecl.php.net/get/memcached-${MEMCACHED_PHP_VERSION}.tgz
 ENV PHP_CONFIG_OPTIONS="\
     --prefix=/usr/local/php \
     --with-config-file-path=/usr/local/php/etc \
@@ -150,7 +150,7 @@ ENV PHP_CONFIG_OPTIONS="\
     --with-pear \
     "
 RUN set -x \
-# libzip (libzip >= 0.11)
+# libzip
     && wget --no-check-certificate ${LIBZIP_URL} -O /tmp/libzip-${LIBZIP_VERSION}.tar.gz \
     && tar xf /tmp/libzip-${LIBZIP_VERSION}.tar.gz -C /tmp \
     && cd /tmp/libzip-${LIBZIP_VERSION} \
@@ -205,7 +205,7 @@ RUN set -x \
    
 #### twemproxy
 ENV TWEMPROXY_VERSION=1.0.4
-ENV TWEMPROXY_URL=https://github.com/meitu/twemproxy/archive/v1.0.4.tar.gz 
+ENV TWEMPROXY_URL=https://github.com/meitu/twemproxy/archive/v${TWEMPROXY_VERSION}.tar.gz 
 
 RUN set -x \
     && wget --no-check-certificate ${TWEMPROXY_URL} -O /tmp/twemproxy-${TWEMPROXY_VERSION}.tar.gz \
