@@ -4,6 +4,8 @@ LABEL maintainer="NGINX-PHP-TWEMPROXY@YOU"
 
 #### PUBLIC
 RUN set -x \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo 'Asia/Shanghai' > /etc/timezone \
     && curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo \
     && yum -y install epel-release.noarch \
     && yum -y install gcc gcc-c++ gd-devel gettext GeoIP-devel libxslt-devel zlib-devel readline-devel sqlite-devel oniguruma-devel perl perl-ExtUtils-Embed libtool re2c bison libxml2-devel bzip2-devel libcurl-devel libpng-devel libicu-devel libmcrypt-devel libwebp-devel libjpeg-devel openssl-devel gmp-devel libmemcached libmemcached-devel autoconf make wget file
@@ -236,6 +238,4 @@ RUN set -x \
 
 EXPOSE 80
 
-STOPSIGNAL SIGQUIT
-
-CMD ["/run.sh"]
+STOPSI
